@@ -1,0 +1,83 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A simple Java stack that creates a Lambda function to replicate objects from one S3 bucket to another S3 bucket whenever the object is uploaded to the S3 bucket.
+Parameters:
+  SourceBucketName:
+    Description: The name of the source S3 bucket.
+    Type: String
+  DestinationBucketName:
+    Description: The name of the destination S3 bucket.
+    Type: String
+  LambdaFunctionName:
+    Description: The name of the Lambda function.
+    Default: S3ReplicationLambda
+    Type: String
+  AllowOverwrite:
+    Description: Whether allow the replicator to overwrite any existing object in the destination S3 bucket.
+    AllowedValues:
+      - true
+      - false
+    Default: false
+    Type: String
+  UseSSE:
+    Description: Whether to use S3 Server Side Encryption.
+    AllowedValues:
+      - true
+      - false
+    Default: false
+    Type: String
+Resources:
+  SourceBucket:
+    Properties:
+      BucketName:
+        Ref: SourceBucketName
+    Type: AWS::S3::Bucket
+  S3ReplicationLambda:
+    Properties:
+      FunctionName:
+        Ref: LambdaFunctionName
+      CodeUri: ../package/s3-replicator.jar
+      Description: A Lambda function that replicates objects from one S3 bucket to another S3 bucket whenever the object is uploaded to the S3 bucket.
+      Environment:
+        Variables:
+          DESTINATION_BUCKET:
+            Ref: DestinationBucketName
+          DESTINATION_REGION:
+            Ref: AWS::Region
+          ALLOW_OVERWRITE:
+            Ref: AllowOverwrite
+          USE_SSE:
+            Ref: UseSSE
+      Events:
+        ObjectUploaded:
+          Properties:
+            Events: s3:ObjectCreated:*
+            Bucket:
+              Ref: SourceBucket
+          Type: S3
+      Handler: com.example.S3ReplicationLambdaHandler::handleRequest
+      MemorySize: 192
+      Role:
+        Fn::GetAtt:
+          - S3ReplicationLambdaRole
+          - Arn
+      Runtime: java8
+      Timeout: 300
+    Type: AWS::Serverless::Function
+  S3ReplicationLambdaRole:
+    Properties:
+      RoleName: S3ReplicationLambdaExecutionRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Type: AWS::IAM::Role

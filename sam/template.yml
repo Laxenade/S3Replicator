@@ -6,7 +6,7 @@ Parameters:
   SourceBucketName:
     Description: The name of the source S3 bucket.
     Type: String
-  DestinationBucketName:
+  DestinationBucketNames:
     Description: The name of the destination S3 bucket.
     Type: String
   LambdaFunctionName:
@@ -41,8 +41,8 @@ Resources:
       Description: A Lambda function that replicates objects from one S3 bucket to another S3 bucket whenever the object is uploaded to the S3 bucket.
       Environment:
         Variables:
-          DESTINATION_BUCKET:
-            Ref: DestinationBucketName
+          DESTINATION_BUCKETS:
+            Ref: DestinationBucketNames
           DESTINATION_REGION:
             Ref: AWS::Region
           ALLOW_OVERWRITE:
